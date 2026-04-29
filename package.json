@@ -1,0 +1,39 @@
+{
+  "name": "relay-kit",
+  "version": "0.1.0",
+  "description": "MASD (Multi-Agent Spec Development) framework for Claude: 6 specialized agents, 6 slash commands, persistent project memory, and one-command install.",
+  "license": "MIT",
+  "bin": {
+    "relay-kit": "./install.sh"
+  },
+  "scripts": {
+    "install:local": "bash ./install.sh",
+    "uninstall:local": "bash ./uninstall.sh"
+  },
+  "keywords": [
+    "claude",
+    "agents",
+    "masd",
+    "spec-driven",
+    "multi-agent",
+    "antigravity",
+    "claude-code",
+    "cowork"
+  ],
+  "files": [
+    "install.sh",
+    "install.ps1",
+    "uninstall.sh",
+    "commands",
+    "agents",
+    "templates",
+    "memory",
+    "README.md",
+    "INSTALL.md",
+    "DISTRIBUTION.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=14"
+  }
+}

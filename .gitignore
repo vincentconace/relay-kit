@@ -1,0 +1,35 @@
+# relay-kit .gitignore
+# Este .gitignore es para proyectos que USAN relay-kit. El repo de relay-kit
+# en sí mismo no contiene una carpeta .relay/.
+#
+# Convención MASD:
+#   - .relay/current/  → artefactos efímeros del spec activo (no se trackean).
+#   - .relay/project.md, .relay/memory/*, .relay/archive/* → conocimiento
+#     persistente del proyecto (SÍ se trackea para que todo el equipo lo comparta).
+
+.relay/current/*
+!.relay/current/.gitkeep
+
+# No ignorar memoria, snapshot ni archivo histórico
+!.relay/project.md
+!.relay/memory/
+!.relay/memory/**
+!.relay/archive/
+!.relay/archive/**
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencias (por si alguien clona el repo de relay-kit y prueba node)
+node_modules/
