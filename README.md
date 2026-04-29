@@ -169,7 +169,7 @@ relay-kit/
 └── memory/            ← 7 archivos bootstrap (lessons, errors, decisions, conventions, glossary, references, skills)
 ```
 
-Ver [INSTALL.md](INSTALL.md) para el mapeo a `~/.antigravity/`, `~/.claude/`, `~/.config/cowork/`.
+Ver [INSTALL.md](INSTALL.md) para el mapeo a `.agents/` (Antigravity), `.claude/` (Claude Code), `~/.config/cowork/` (Cowork).
 
 ---
 

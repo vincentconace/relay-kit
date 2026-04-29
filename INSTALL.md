@@ -55,8 +55,8 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 . -Yes
 
 1. **Resuelve el directorio del proyecto.** Primer argumento posicional o `pwd`.
 2. **Detecta el host** en este orden y se queda con el primero que matchee:
-   1. `~/.antigravity/` o `<proyecto>/.antigravity/` → **Antigravity**
-   2. `~/.claude/` o `<proyecto>/.claude/` → **Claude Code**
+   1. `<proyecto>/.agents/` o `~/.agents/` → **Antigravity** (Antigravity usa `.agents/`, no `.antigravity/`)
+   2. `<proyecto>/.claude/` o `~/.claude/` → **Claude Code**
    3. `~/.config/cowork/` → **Cowork**
    4. cualquier otro caso → **fallback genérico** (crea `<proyecto>/.claude/`, compatible con cualquier herramienta que entienda el formato Claude Code)
 3. **Anuncia** el host detectado y dónde va a instalar. Pausa 3 segundos (saltable con `--yes`).
@@ -78,7 +78,7 @@ El script usa `set -euo pipefail` y sale con código distinto de cero ante cualq
 
 | Host                     | Directorio del host (`<host_dir>`)            | Slash commands                          | Agents                                 | Templates                              |
 |--------------------------|-----------------------------------------------|-----------------------------------------|----------------------------------------|----------------------------------------|
-| **Antigravity**          | `~/.antigravity/` o `<proy>/.antigravity/`    | `<host_dir>/commands/relay/*.md`        | `<host_dir>/agents/relay/*.md`         | `<host_dir>/templates/relay/*.md`      |
+| **Antigravity**          | `<proy>/.agents/` o `~/.agents/`              | `<host_dir>/commands/relay/*.md`        | `<host_dir>/agents/relay/*.md`         | `<host_dir>/templates/relay/*.md`      |
 | **Claude Code**          | `~/.claude/` o `<proy>/.claude/`              | `<host_dir>/commands/relay/*.md`        | `<host_dir>/agents/relay/*.md`         | `<host_dir>/templates/relay/*.md`      |
 | **Cowork**               | `~/.config/cowork/`                           | `<host_dir>/commands/relay/*.md`        | `<host_dir>/agents/relay/*.md`         | `<host_dir>/templates/relay/*.md`      |
 | **Fallback genérico**    | `<proy>/.claude/` (nuevo)                     | `<host_dir>/commands/relay/*.md`        | `<host_dir>/agents/relay/*.md`         | `<host_dir>/templates/relay/*.md`      |

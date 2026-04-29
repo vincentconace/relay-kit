@@ -33,9 +33,9 @@ $HostName = ''
 $HostDir = ''
 $HomeDir = $env:USERPROFILE
 
-if ((Test-Path "$HomeDir\.antigravity") -or (Test-Path "$TargetDir\.antigravity")) {
+if ((Test-Path "$TargetDir\.agents") -or (Test-Path "$HomeDir\.agents")) {
     $HostName = 'Antigravity'
-    if (Test-Path "$TargetDir\.antigravity") { $HostDir = "$TargetDir\.antigravity" } else { $HostDir = "$HomeDir\.antigravity" }
+    if (Test-Path "$TargetDir\.agents") { $HostDir = "$TargetDir\.agents" } else { $HostDir = "$HomeDir\.agents" }
 }
 elseif ((Test-Path "$HomeDir\.claude") -or (Test-Path "$TargetDir\.claude")) {
     $HostName = 'Claude Code'

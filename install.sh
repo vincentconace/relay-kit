@@ -81,14 +81,17 @@ TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
 HOST_NAME=""
 HOST_DIR=""
 
-if [ -d "$HOME/.antigravity" ] || [ -d "$TARGET_DIR/.antigravity" ]; then
+# Antigravity uses `.agents/` (sibling to `.agents/skills/` convention).
+# Claude Code uses `.claude/`. Cowork uses `~/.config/cowork/`.
+# Probe project-local first (per-project install), then $HOME (global install).
+if [ -d "$TARGET_DIR/.agents" ] || [ -d "$HOME/.agents" ]; then
   HOST_NAME="Antigravity"
-  if [ -d "$TARGET_DIR/.antigravity" ]; then
-    HOST_DIR="$TARGET_DIR/.antigravity"
+  if [ -d "$TARGET_DIR/.agents" ]; then
+    HOST_DIR="$TARGET_DIR/.agents"
   else
-    HOST_DIR="$HOME/.antigravity"
+    HOST_DIR="$HOME/.agents"
   fi
-elif [ -d "$HOME/.claude" ] || [ -d "$TARGET_DIR/.claude" ]; then
+elif [ -d "$TARGET_DIR/.claude" ] || [ -d "$HOME/.claude" ]; then
   HOST_NAME="Claude Code"
   if [ -d "$TARGET_DIR/.claude" ]; then
     HOST_DIR="$TARGET_DIR/.claude"
