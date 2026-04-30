@@ -3,19 +3,15 @@
 # en sí mismo no contiene una carpeta .relay/.
 #
 # Convención MASD:
-#   - .relay/current/  → artefactos efímeros del spec activo (no se trackean).
-#   - .relay/project.md, .relay/memory/*, .relay/archive/* → conocimiento
-#     persistente del proyecto (SÍ se trackea para que todo el equipo lo comparta).
+#   - .relay/features/<type>-<slug>/  → artefactos por feature (sí se trackean,
+#     espejan la rama git de la feature; el equipo comparte plan/tasks/review).
+#   - .relay/project.md, .relay/memory/*, .relay/archive/*, .relay/HEAD →
+#     conocimiento persistente del proyecto (SÍ se trackea para que todo el
+#     equipo lo comparta).
 
-.relay/current/*
-!.relay/current/.gitkeep
-
-# No ignorar memoria, snapshot ni archivo histórico
-!.relay/project.md
-!.relay/memory/
-!.relay/memory/**
-!.relay/archive/
-!.relay/archive/**
+# No ignorar nada dentro de .relay/ por defecto: todo se commitea y se comparte.
+!.relay/
+!.relay/**
 
 # Sistema operativo / editores
 .DS_Store

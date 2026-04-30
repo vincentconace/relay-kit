@@ -1,7 +1,7 @@
 # relay-kit installer (Windows / PowerShell mirror of install.sh)
 # Implements MASD (Multi-Agent Spec Development) for Claude across Antigravity,
 # Claude Code, and Cowork. Installs slash commands, agents, and templates into
-# the host directory and bootstraps .relay/{current,archive,memory}/ in the
+# the host directory and bootstraps .relay/{features,archive,memory}/ in the
 # project so the 6 MASD phases can run end-to-end.
 #
 # Usage:
@@ -61,7 +61,7 @@ Write-Host "  · commands\relay\   <- commands\*.md"
 Write-Host "  · agents\relay\     <- agents\*.md + agents\sub\*.md"
 Write-Host "  · templates\relay\  <- templates\*.md"
 Write-Host "Bootstrap del proyecto:"
-Write-Host "  · $TargetDir\.relay\{current,archive,memory}\"
+Write-Host "  · $TargetDir\.relay\{features,archive,memory}\"
 Write-Host "  · memory\*.md (sólo si no existen)"
 Write-Host "========================================"
 
@@ -134,7 +134,7 @@ Get-ChildItem -LiteralPath "$ScriptDir\templates" -Filter '*.md' -File | ForEach
 }
 
 # Bootstrap the project's .relay/ tree.
-New-Item -ItemType Directory -Force -Path "$TargetDir\.relay\current" | Out-Null
+New-Item -ItemType Directory -Force -Path "$TargetDir\.relay\features" | Out-Null
 New-Item -ItemType Directory -Force -Path "$TargetDir\.relay\archive" | Out-Null
 New-Item -ItemType Directory -Force -Path "$TargetDir\.relay\memory"  | Out-Null
 
@@ -156,13 +156,14 @@ Write-Host "Si este proyecto YA tiene código, corré /onboard ahora para sembra
 Write-Host "contexto (escribe .relay\project.md y siembra la memoria) antes de tu"
 Write-Host "primera tarea. En proyectos greenfield podés saltar /onboard."
 Write-Host ""
-Write-Host "Quick start (flujo MASD):"
+Write-Host "Quick start (flujo MASD - 7 slash commands):"
 Write-Host "  1. /onboard                         (recomendado en proyectos existentes)"
-Write-Host "  2. /analyze ""<tu pedido>"""
-Write-Host "  3. /plan"
-Write-Host "  4. /tasks"
+Write-Host "  2. /analyze ""<tu pedido>""           (crea .relay/features/<type>-<slug>/ + propone rama git)"
+Write-Host "  3. /plan                            (escribe plan.md en la feature activa)"
+Write-Host "  4. /tasks                           (escribe tasks.md en la feature activa)"
 Write-Host "  5. /implement                       (o /implement T-001 para una sola)"
 Write-Host "  6. /review                          (cierra el loop y actualiza la memoria)"
+Write-Host "  7. /update                          (re-pull del framework desde GitHub; preserva memoria y features)"
 Write-Host ""
 Write-Host "Documentación: README.md · INSTALL.md · DISTRIBUTION.md (en español)."
 Write-Host "========================================"

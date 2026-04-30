@@ -2,7 +2,7 @@
 
 > Produced by the `task-maker` agent on `/tasks`. Consumed by the `implementer`.
 
-- Linked plan: `.relay/current/plan.md`
+- Linked plan: `.relay/features/<active>/plan.md`
 - Date: <YYYY-MM-DD>
 
 ## Conventions

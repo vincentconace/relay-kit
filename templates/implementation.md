@@ -2,7 +2,7 @@
 
 > Produced by the `implementer` orchestrator (and the sub-agents it dispatches) on `/implement`. Consumed by the `reviewer`.
 
-- Linked tasks: `.relay/current/tasks.md`
+- Linked tasks: `.relay/features/<active>/tasks.md`
 - Date: <YYYY-MM-DD>
 - Task IDs executed: <T-001, T-002, ...>
 

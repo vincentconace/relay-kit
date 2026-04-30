@@ -2,6 +2,7 @@
 
 > Produced by the `analyst` agent on `/analyze "<task>"`. Consumed by the `planner`.
 
+- feature_id: <type>-<slug>
 - Task input: <quote the user's raw request>
 - Date: <YYYY-MM-DD>
 

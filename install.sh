@@ -2,9 +2,10 @@
 # relay-kit installer
 # Implements MASD (Multi-Agent Spec Development) for Claude across Antigravity,
 # Claude Code, and Cowork. Installs slash commands, agents, and templates into
-# the host directory and bootstraps .relay/{current,archive,memory}/ in the
-# project so the 6 MASD phases (/onboard /analyze /plan /tasks /implement /review)
-# can run end-to-end.
+# the host directory and bootstraps .relay/{features,archive,memory}/ in the
+# project so the 7 MASD slash commands (/onboard /analyze /plan /tasks /implement
+# /review /update) can run end-to-end. Each /analyze creates a dedicated
+# .relay/features/<type>-<slug>/ folder paired 1:1 with a git branch.
 #
 # Usage:
 #   bash install.sh [target_project_dir] [--yes]
@@ -121,7 +122,7 @@ Archivos a copiar:
   · agents/relay/     ← agents/*.md + agents/sub/*.md
   · templates/relay/  ← templates/*.md
 Bootstrap del proyecto:
-  · ${TARGET_DIR}/.relay/{current,archive,memory}/
+  · ${TARGET_DIR}/.relay/{features,archive,memory}/
   · memory/*.md (sólo si no existen)
 ========================================
 EOF
@@ -203,7 +204,7 @@ done
 # ------------------------------------------------------------------------------
 # Bootstrap the project's .relay/ tree (idempotent — never overwrite memory).
 # ------------------------------------------------------------------------------
-mkdir -p "$TARGET_DIR/.relay/current"
+mkdir -p "$TARGET_DIR/.relay/features"
 mkdir -p "$TARGET_DIR/.relay/archive"
 mkdir -p "$TARGET_DIR/.relay/memory"
 
@@ -230,13 +231,14 @@ Si este proyecto YA tiene código, corré /onboard ahora para sembrar el
 contexto (escribe .relay/project.md y siembra la memoria) antes de tu
 primera tarea. En proyectos greenfield podés saltar /onboard.
 
-Quick start (flujo MASD):
+Quick start (flujo MASD — 7 slash commands):
   1. /onboard                         (recomendado en proyectos existentes)
-  2. /analyze "<tu pedido>"
-  3. /plan
-  4. /tasks
+  2. /analyze "<tu pedido>"           (crea .relay/features/<type>-<slug>/ + propone rama git)
+  3. /plan                            (escribe plan.md en la feature activa)
+  4. /tasks                           (escribe tasks.md en la feature activa)
   5. /implement                       (o /implement T-001 para una sola)
   6. /review                          (cierra el loop y actualiza la memoria)
+  7. /update                          (re-pull del framework desde GitHub; preserva memoria y features)
 
 Documentación: README.md · INSTALL.md · DISTRIBUTION.md (en español).
 ========================================

@@ -47,7 +47,7 @@
 
 - usar cuando: the deliverable is a spreadsheet (`.xlsx`, `.xlsm`, `.csv`, `.tsv`) or messy tabular data must be cleaned/restructured.
 - requiere: `xlsx` skill installed.
-- fallback: emit the data as a Markdown table or CSV in `.relay/current/` and flag conversion to `.xlsx` as pending.
+- fallback: emit the data as a Markdown table or CSV in `.relay/features/<active>/` and flag conversion to `.xlsx` as pending.
 
 ## frontend-design
 

@@ -2,7 +2,7 @@
 
 > Produced by the `planner` agent on `/plan`. Consumed by the `task-maker`.
 
-- Linked analysis: `.relay/current/analysis.md`
+- Linked analysis: `.relay/features/<active>/analysis.md`
 - Date: <YYYY-MM-DD>
 
 ## High-level approach

@@ -12,11 +12,12 @@ MASD (Multi-Agent Spec Development) es la metodología que relay-kit codifica. L
 
 ```
 /onboard      →  onboarder        →  .relay/project.md  +  semilla en memoria
-/analyze      →  analyst          →  .relay/current/analysis.md
-/plan         →  planner          →  .relay/current/plan.md
-/tasks        →  task-maker       →  .relay/current/tasks.md
-/implement    →  implementer + sub-agents + skills →  .relay/current/implementation.md
-/review       →  reviewer         →  .relay/current/review.md  +  APPEND a .relay/memory/*.md
+/analyze      →  analyst          →  .relay/features/<type>-<slug>/analysis.md  +  rama git
+/plan         →  planner          →  .relay/features/<active>/plan.md
+/tasks        →  task-maker       →  .relay/features/<active>/tasks.md
+/implement    →  implementer + sub-agents + skills →  .relay/features/<active>/implementation.md
+/review       →  reviewer         →  .relay/features/<active>/review.md  +  APPEND a .relay/memory/*.md
+/update       →  re-pull del framework desde GitHub (preserva memoria y features)
 ```
 
 **Diferencias frente a GitHub Spec Kit:**
@@ -53,9 +54,41 @@ cd relay-kit
 powershell -ExecutionPolicy Bypass -File .\install.ps1 C:\ruta\al\proyecto
 ```
 
-El instalador detecta el host (Antigravity → Claude Code → Cowork → fallback genérico), copia los slash commands, agentes y templates al directorio del host, y crea `.relay/{current,archive,memory}/` en el proyecto. **Nunca pisa archivos de memoria existentes.**
+El instalador detecta el host (Antigravity → Claude Code → Cowork → fallback genérico), copia los slash commands, agentes y templates al directorio del host, y crea `.relay/{features,archive,memory}/` en el proyecto. **Nunca pisa archivos de memoria existentes ni features ya creadas.**
 
 Ver [INSTALL.md](INSTALL.md) para detalles, mapeo de paths por host y la opción `npx relay-kit`.
+
+---
+
+## Workflow por feature
+
+relay-kit organiza el trabajo **una feature por carpeta**, espejando cómo trabajás con git:
+
+- **`/analyze "<pedido>"`** crea `.relay/features/<type>-<slug>/` (con `analysis.md` adentro), actualiza `.relay/HEAD`, y te propone la rama git `<type>/<slug>`. Aceptás con `y`, la creás vos después con `n`/`s`, o saltás silenciosamente con `--no-branch`. Con `--yes` ejecuta la rama automáticamente si el working tree está limpio.
+- **Cambiar entre features:** `git checkout fix/login-redirect`. Las próximas corridas de `/plan`, `/tasks`, `/implement`, `/review` resuelven la feature activa automáticamente desde la rama. Si no estás en una rama tipada, caen al fallback `.relay/HEAD`.
+- **Múltiples features coexisten** bajo `.relay/features/`. Mientras una está en progreso, podés abrir otra sin perder contexto.
+- **Archivar una feature completada** (después del merge): `mv .relay/features/feature-add-health .relay/archive/2026-04-29-feature-add-health`. La memoria (`.relay/memory/*.md`) ya tiene las lecciones que el reviewer destiló de esa feature.
+
+Tipos válidos: `feature` · `fix` · `refactor` · `chore` · `docs`. El slug es kebab-case (máx. 5 palabras, sin stopwords). Convención de nombres: carpeta `<type>-<slug>` ↔ rama `<type>/<slug>`.
+
+---
+
+## Mantenerse actualizado
+
+El framework se auto-actualiza sin tocar tu memoria ni tus features:
+
+```bash
+# desde dentro de Claude:
+/update
+
+# o desde la terminal:
+bash <(curl -fsSL https://raw.githubusercontent.com/vincentconace/relay-kit/main/update.sh)
+
+# o si ya cloneaste el repo:
+bash update.sh
+```
+
+Internamente `update.sh` re-corre `install.sh --yes` desde `main`. Sobrescribe los archivos del host (`commands/relay/`, `agents/relay/`, `templates/relay/`) con los más nuevos, pero **nunca toca** `.relay/memory/*` ni `.relay/features/*`.
 
 ---
 
@@ -78,16 +111,26 @@ El **onboarder** recorre el repo, detecta `Express 4` + `TypeScript 5.4`, mapea 
 ### 1) Analizar el pedido
 
 ```
-/analyze "agregar endpoint GET /health que devuelva { status: 'ok', uptime } en JSON"
+/analyze "agregar endpoint GET /api/health"
 ```
 
-El **analyst** lee `project.md` y la memoria, y produce `.relay/current/analysis.md`:
+El **analyst** lee `project.md` y la memoria, infiere `type=feature` y genera el slug `add-health-endpoint`. Crea `.relay/features/feature-add-health-endpoint/`, actualiza `.relay/HEAD` con `feature-add-health-endpoint`, y te propone:
 
+```
+Te sugiero crear y cambiar a la rama: git checkout -b feature/add-health-endpoint
+[y]es / [n]o / [s]kip
+```
+
+Aceptás con `y` (o pasás `--yes` para auto-ejecutar). Si tu working tree está limpio, queda parado en la rama `feature/add-health-endpoint`. A partir de acá, todas las fases siguientes resuelven la feature activa desde esa rama (con fallback a `.relay/HEAD` si trabajás sin git).
+
+`.relay/features/feature-add-health-endpoint/analysis.md` queda con:
+
+- **feature_id:** `feature-add-health-endpoint`
 - **Problem statement:** exponer un endpoint público de healthcheck para monitoreo externo.
-- **In scope:** ruta `GET /health`, respuesta JSON con `status` y `uptime` (segundos desde el boot del proceso).
+- **In scope:** ruta `GET /api/health`, respuesta JSON con `status` y `uptime` (segundos desde el boot del proceso).
 - **Out of scope:** auth, métricas Prometheus, dependencias DB.
 - **Constraints:** seguir `[memory:conventions#backend-conventions]` (un archivo por recurso bajo `src/server/routes/`).
-- **Success criteria:** `curl localhost:3000/health` devuelve `{ "status": "ok", "uptime": <number> }` con HTTP 200.
+- **Success criteria:** `curl localhost:3000/api/health` devuelve `{ "status": "ok", "uptime": <number> }` con HTTP 200.
 
 ### 2) Planear
 
@@ -95,11 +138,11 @@ El **analyst** lee `project.md` y la memoria, y produce `.relay/current/analysis
 /plan
 ```
 
-El **planner** lee análisis + project + memoria. Antes de elegir el shape de la respuesta, decide consultar la convención IETF para healthchecks usando WebSearch:
+El **planner** resuelve la feature activa desde la rama `feature/add-health-endpoint`, lee `analysis.md` + `project.md` + memoria. Antes de elegir el shape de la respuesta, decide consultar la convención IETF para healthchecks usando WebSearch:
 
 > Consultando RFC 6585 y la convención `application/health+json` en `[web:inadarei.github.io](https://inadarei.github.io/rfc-healthcheck/)` para confirmar el shape recomendado. Consultado 2026-04-29.
 
-Produce `.relay/current/plan.md`:
+Produce `.relay/features/feature-add-health-endpoint/plan.md`:
 
 - **High-level approach:** un nuevo router `health.ts` registrado en `src/server/index.ts`. Sin dependencias nuevas.
 - **Files to touch:**
@@ -115,7 +158,7 @@ Produce `.relay/current/plan.md`:
 /tasks
 ```
 
-El **task-maker** lee plan + `memory/skills.md` y produce `.relay/current/tasks.md` con:
+El **task-maker** lee plan + `memory/skills.md` y produce `.relay/features/feature-add-health-endpoint/tasks.md` con:
 
 - **T-001** — Crear `src/server/routes/health.ts` con handler. Sub-agente `backend-implementer`. Skill `none`.
 - **T-002** — Registrar el router en `src/server/index.ts`. Sub-agente `backend-implementer`. Depende de T-001.
@@ -139,7 +182,7 @@ El **implementer** orquesta. Para T-001 y T-002 valida que la skill sugerida est
 /review
 ```
 
-El **reviewer** corre `git diff`, valida los criterios de aceptación con `curl` y con el output del test, y produce `.relay/current/review.md` con verdict `pass`. Crucialmente, **appendea a la memoria**:
+El **reviewer** corre `git diff $(git merge-base HEAD main)..HEAD`, valida los criterios de aceptación con `curl` y con el output del test, y produce `.relay/features/feature-add-health-endpoint/review.md` con verdict `pass`. Crucialmente, **appendea a la memoria**:
 
 - `memory/references.md` — la URL del RFC healthcheck que consultó el planner.
 - `memory/lessons.md` — `L-002 — En endpoints de healthcheck, devolver siempre uptime en segundos enteros para que sea grafable sin parseo.`
@@ -147,6 +190,25 @@ El **reviewer** corre `git diff`, valida los criterios de aceptación con `curl`
 - `memory/skills.md` — sin cambios.
 
 La próxima vez que `/analyze` corra para "agregar `/readiness`", el analyst ya partirá de esa lección.
+
+### 6) Archivar (después del merge)
+
+Una vez que mergeás `feature/add-health-endpoint` a `main`:
+
+```bash
+mv .relay/features/feature-add-health-endpoint \
+   .relay/archive/2026-04-29-feature-add-health-endpoint
+```
+
+La memoria queda viva, la feature pasa al histórico.
+
+### 7) Mantener el framework fresco
+
+```
+/update
+```
+
+Re-pull del último relay-kit desde GitHub. Tu `.relay/memory/*` y `.relay/features/*` quedan intactos.
 
 ---
 
@@ -161,9 +223,10 @@ relay-kit/
 ├── .gitignore         ← para proyectos que USAN relay-kit
 ├── install.sh         ← bash, idempotente, detecta host
 ├── install.ps1        ← espejo PowerShell
+├── update.sh          ← re-corre install.sh --yes desde main (auto-update)
 ├── uninstall.sh       ← quita el framework (preserva .relay/)
-├── package.json       ← bin: relay-kit
-├── commands/          ← 6 slash commands (markdown)
+├── package.json       ← bin: relay-kit, relay-kit-update
+├── commands/          ← 7 slash commands (markdown): onboard, analyze, plan, tasks, implement, review, update
 ├── agents/            ← 6 main + sub/ con 5 sub-agentes
 ├── templates/         ← 6 esqueletos markdown
 └── memory/            ← 7 archivos bootstrap (lessons, errors, decisions, conventions, glossary, references, skills)
@@ -183,19 +246,20 @@ Ver [INSTALL.md](INSTALL.md) para el mapeo a `.agents/` (Antigravity), `.claude/
 
 ---
 
-## Quick Start (los 6 slash commands del flujo MASD)
+## Quick Start (los 7 slash commands del flujo MASD)
 
 ```
 1. /onboard                         (la primera vez en proyectos existentes)
-2. /analyze "<tu pedido>"           (analyst → analysis.md)
-3. /plan                            (planner → plan.md)
-4. /tasks                           (task-maker → tasks.md)
+2. /analyze "<tu pedido>"           (analyst → crea feature folder + propone rama git)
+3. /plan                            (planner → plan.md en la feature activa)
+4. /tasks                           (task-maker → tasks.md en la feature activa)
 5. /implement                       (implementer + sub-agents → implementation.md)
 6. /review                          (reviewer → review.md + memoria actualizada)
+7. /update                          (re-pull del framework, preserva memoria y features)
 ```
 
 Para correr una sola tarea: `/implement T-002`.
-Para archivar el spec activo: mover `.relay/current/*` a `.relay/archive/<fecha>-<slug>/`.
+Para archivar una feature completada: `mv .relay/features/<active> .relay/archive/<YYYY-MM-DD>-<active>`.
 
 ---
 

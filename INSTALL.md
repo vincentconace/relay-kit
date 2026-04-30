@@ -65,10 +65,11 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 . -Yes
    - `agents/*.md` y `agents/sub/*.md` → `<host_dir>/agents/relay/`
    - `templates/*.md` → `<host_dir>/templates/relay/`
 5. **Bootstrapea** el proyecto:
-   - Crea `<proyecto>/.relay/current/`, `<proyecto>/.relay/archive/`, `<proyecto>/.relay/memory/`.
+   - Crea `<proyecto>/.relay/features/`, `<proyecto>/.relay/archive/`, `<proyecto>/.relay/memory/`.
    - Copia los 7 archivos `memory/*.md` SOLO si no existen — la memoria acumulada del proyecto nunca se pisa.
    - **NO crea `.relay/project.md`** — ese archivo lo produce `/onboard`.
-6. **Imprime** un footer con la recomendación de correr `/onboard` si el proyecto ya tiene código, y el Quick Start con los 6 slash commands.
+   - **NO crea `.relay/HEAD`** — ese archivo lo crea el primer `/analyze`.
+6. **Imprime** un footer con la recomendación de correr `/onboard` si el proyecto ya tiene código, y el Quick Start con los 7 slash commands (incluido `/update`).
 
 El script usa `set -euo pipefail` y sale con código distinto de cero ante cualquier fallo.
 
@@ -92,8 +93,8 @@ En todos los casos, los artefactos se prefijan con `relay/` para no chocar con o
 ```
 <proyecto>/
 └── .relay/
-    ├── current/        ← efímero, sobrescrito por /analyze
-    ├── archive/        ← especs cerrados (mover a mano o vía /archive)
+    ├── features/       ← una carpeta por feature; aparece tras el primer /analyze
+    ├── archive/        ← features cerradas (mover a mano)
     └── memory/
         ├── lessons.md
         ├── errors.md
@@ -105,6 +106,34 @@ En todos los casos, los artefactos se prefijan con `relay/` para no chocar con o
 ```
 
 `.relay/project.md` aparece después del primer `/onboard`.
+`.relay/HEAD` aparece después del primer `/analyze` (es el fallback usado cuando no estás en una rama git tipada).
+
+---
+
+## Update (mantenerse al día)
+
+relay-kit incluye dos formas equivalentes de actualizar el framework sin tocar tu memoria ni tus features:
+
+```bash
+# desde dentro de Claude (slash command):
+/update
+
+# desde la terminal, sin clonar:
+bash <(curl -fsSL https://raw.githubusercontent.com/vincentconace/relay-kit/main/update.sh)
+
+# desde la terminal, si ya cloneaste el repo:
+bash update.sh
+```
+
+Internamente `update.sh` re-corre `install.sh --yes` apuntando al `main` del repo público. **Sobrescribe** los archivos del host (`<host>/commands/relay/`, `<host>/agents/relay/`, `<host>/templates/relay/`). **Preserva**:
+
+- `.relay/memory/*` — toda tu memoria acumulada (lessons, errors, decisions, conventions, glossary, references, skills).
+- `.relay/features/*` — todas tus features en progreso (no se borra ninguna carpeta `<type>-<slug>/`).
+- `.relay/project.md` — el snapshot del proyecto generado por `/onboard`.
+- `.relay/HEAD` — el puntero a tu feature activa.
+- `.relay/archive/*` — el histórico.
+
+Si hay un breaking change en el flujo de archivos, la nota se publica en el CHANGELOG del repo y `/update` lo respeta — tu memoria sigue siendo tuya.
 
 ---
 
@@ -114,6 +143,7 @@ En todos los casos, los artefactos se prefijan con `relay/` para no chocar con o
 
 - Archivos del host (`commands/`, `agents/`, `templates/`) que difieren del repo: pide confirmación (o sobrescribe con `--yes`). Si son idénticos: no hace nada.
 - Archivos de memoria del proyecto: NUNCA se sobrescriben. Para resetear la memoria de un proyecto, borrá manualmente los archivos correspondientes y re-ejecutá el instalador (o un `/onboard --refresh`).
+- Carpetas de features (`.relay/features/<type>-<slug>/`): NUNCA se tocan por el instalador o por `/update`.
 
 ---
 
