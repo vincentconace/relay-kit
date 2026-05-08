@@ -33,33 +33,44 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# Parse args: optional target dir, optional --yes.
+# Parse args: optional target dir, --yes, --host.
 # ------------------------------------------------------------------------------
 TARGET_DIR=""
 ASSUME_YES="no"
-for arg in "$@"; do
-  case "$arg" in
-    --yes|-y) ASSUME_YES="yes" ;;
+EXPLICIT_HOSTS=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --yes|-y) ASSUME_YES="yes"; shift ;;
+    --host) EXPLICIT_HOSTS="${2:-}"; shift 2 ;;
+    --host=*) EXPLICIT_HOSTS="${1#--host=}"; shift ;;
     --help|-h)
       cat <<'HLP'
 relay-kit install.sh — instala el framework MASD en este proyecto.
 
 Uso:
-  bash install.sh [target_project_dir] [--yes]
+  bash install.sh [target_project_dir] [--yes] [--host <list>]
 
 Args:
   target_project_dir    Directorio raíz del proyecto donde se creará .relay/.
                         Default: directorio actual (pwd).
   --yes, -y             No pausar antes de instalar.
+  --host <list>         Lista separada por comas de hosts a instalar:
+                        claude, antigravity, cowork.
+                        Default: todos los detectados.
   --help, -h            Mostrar esta ayuda.
 HLP
       exit 0
       ;;
+    -*)
+      echo "ERROR: flag no reconocido: $1" >&2
+      exit 2
+      ;;
     *)
       if [ -z "$TARGET_DIR" ]; then
-        TARGET_DIR="$arg"
+        TARGET_DIR="$1"; shift
       else
-        echo "ERROR: argumento no reconocido: $arg" >&2
+        echo "ERROR: argumento no reconocido: $1" >&2
         exit 2
       fi
       ;;
@@ -77,47 +88,85 @@ fi
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
 
 # ------------------------------------------------------------------------------
-# Detect host: Antigravity → Claude Code → Cowork → generic fallback.
+# Resolve hosts: each entry is "Name|Path".
+#   - With --host, the user picks an explicit subset (claude/antigravity/cowork).
+#   - Without --host, we install into every host detected on the machine, so a
+#     user with both Claude Code and Antigravity gets relay-kit working in both.
+#   - If nothing is detected, fall back to creating $TARGET_DIR/.claude.
+# Project-local hosts (TARGET_DIR/.claude, TARGET_DIR/.agents) win over the
+# user-global ones ($HOME/.claude, $HOME/.agents) when both exist.
 # ------------------------------------------------------------------------------
-HOST_NAME=""
-HOST_DIR=""
+HOSTS=()
 
-# Antigravity uses `.agents/` (sibling to `.agents/skills/` convention).
-# Claude Code uses `.claude/`. Cowork uses `~/.config/cowork/`.
-# Probe project-local first (per-project install), then $HOME (global install).
-if [ -d "$TARGET_DIR/.agents" ] || [ -d "$HOME/.agents" ]; then
-  HOST_NAME="Antigravity"
-  if [ -d "$TARGET_DIR/.agents" ]; then
-    HOST_DIR="$TARGET_DIR/.agents"
-  else
-    HOST_DIR="$HOME/.agents"
-  fi
-elif [ -d "$TARGET_DIR/.claude" ] || [ -d "$HOME/.claude" ]; then
-  HOST_NAME="Claude Code"
-  if [ -d "$TARGET_DIR/.claude" ]; then
-    HOST_DIR="$TARGET_DIR/.claude"
-  else
-    HOST_DIR="$HOME/.claude"
-  fi
-elif [ -d "$HOME/.config/cowork" ]; then
-  HOST_NAME="Cowork"
-  HOST_DIR="$HOME/.config/cowork"
+resolve_host_dir() {
+  # $1 = host name (claude|antigravity|cowork)
+  # echoes "Name|Path" (or empty if not resolvable for that name)
+  case "$1" in
+    claude|claude-code|claudecode)
+      if [ -d "$TARGET_DIR/.claude" ]; then
+        echo "Claude Code|$TARGET_DIR/.claude"
+      else
+        echo "Claude Code|$HOME/.claude"
+      fi
+      ;;
+    antigravity)
+      if [ -d "$TARGET_DIR/.agents" ]; then
+        echo "Antigravity|$TARGET_DIR/.agents"
+      else
+        echo "Antigravity|$HOME/.agents"
+      fi
+      ;;
+    cowork)
+      echo "Cowork|$HOME/.config/cowork"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+if [ -n "$EXPLICIT_HOSTS" ]; then
+  IFS=',' read -r -a __requested <<< "$EXPLICIT_HOSTS"
+  for req in "${__requested[@]}"; do
+    req_lc="$(echo "$req" | tr '[:upper:]' '[:lower:]' | tr -d ' ')"
+    entry="$(resolve_host_dir "$req_lc" || true)"
+    if [ -z "$entry" ]; then
+      echo "ERROR: --host debe ser claude, antigravity o cowork (recibí: $req)" >&2
+      exit 2
+    fi
+    HOSTS+=("$entry")
+  done
 else
-  HOST_NAME="generic-fallback (Claude Code-compatible)"
-  HOST_DIR="$TARGET_DIR/.claude"
+  # Auto-detect every host present on the machine.
+  if [ -d "$TARGET_DIR/.claude" ] || [ -d "$HOME/.claude" ]; then
+    HOSTS+=("$(resolve_host_dir claude)")
+  fi
+  if [ -d "$TARGET_DIR/.agents" ] || [ -d "$HOME/.agents" ]; then
+    HOSTS+=("$(resolve_host_dir antigravity)")
+  fi
+  if [ -d "$HOME/.config/cowork" ]; then
+    HOSTS+=("$(resolve_host_dir cowork)")
+  fi
+  if [ "${#HOSTS[@]}" -eq 0 ]; then
+    HOSTS+=("Claude Code (fallback)|$TARGET_DIR/.claude")
+  fi
 fi
 
 # ------------------------------------------------------------------------------
 # Announce.
 # ------------------------------------------------------------------------------
+echo "========================================"
+echo "relay-kit · MASD installer"
+echo "========================================"
+echo "Hosts a instalar:"
+for entry in "${HOSTS[@]}"; do
+  name="${entry%%|*}"
+  path="${entry#*|}"
+  printf "  · %-22s → %s\n" "$name" "$path"
+done
 cat <<EOF
-========================================
-relay-kit · MASD installer
-========================================
-Host detectado : ${HOST_NAME}
-Host dir       : ${HOST_DIR}
 Proyecto       : ${TARGET_DIR}
-Archivos a copiar:
+Archivos a copiar (por host):
   · commands/relay/   ← commands/*.md
   · agents/relay/     ← agents/*.md + agents/sub/*.md
   · templates/relay/  ← templates/*.md
@@ -171,34 +220,42 @@ copy_file_no_overwrite() {
 }
 
 # ------------------------------------------------------------------------------
-# Install host artifacts.
+# Install host artifacts (one pass per detected host).
 # ------------------------------------------------------------------------------
-mkdir -p "$HOST_DIR/commands/relay"
-mkdir -p "$HOST_DIR/agents/relay"
-mkdir -p "$HOST_DIR/templates/relay"
+for entry in "${HOSTS[@]}"; do
+  host_name="${entry%%|*}"
+  host_dir="${entry#*|}"
 
-echo "→ commands/"
-for f in "$SCRIPT_DIR/commands/"*.md; do
-  [ -e "$f" ] || { echo "ERROR: no se encontraron commands/*.md en $SCRIPT_DIR/commands" >&2; exit 3; }
-  copy_file_safe "$f" "$HOST_DIR/commands/relay/$(basename "$f")"
-done
+  echo ""
+  echo "==> ${host_name} (${host_dir})"
 
-echo "→ agents/"
-for f in "$SCRIPT_DIR/agents/"*.md; do
-  [ -e "$f" ] || { echo "ERROR: no se encontraron agents/*.md en $SCRIPT_DIR/agents" >&2; exit 3; }
-  copy_file_safe "$f" "$HOST_DIR/agents/relay/$(basename "$f")"
-done
-if [ -d "$SCRIPT_DIR/agents/sub" ]; then
-  for f in "$SCRIPT_DIR/agents/sub/"*.md; do
-    [ -e "$f" ] || break
-    copy_file_safe "$f" "$HOST_DIR/agents/relay/$(basename "$f")"
+  mkdir -p "$host_dir/commands/relay"
+  mkdir -p "$host_dir/agents/relay"
+  mkdir -p "$host_dir/templates/relay"
+
+  echo "→ commands/"
+  for f in "$SCRIPT_DIR/commands/"*.md; do
+    [ -e "$f" ] || { echo "ERROR: no se encontraron commands/*.md en $SCRIPT_DIR/commands" >&2; exit 3; }
+    copy_file_safe "$f" "$host_dir/commands/relay/$(basename "$f")"
   done
-fi
 
-echo "→ templates/"
-for f in "$SCRIPT_DIR/templates/"*.md; do
-  [ -e "$f" ] || { echo "ERROR: no se encontraron templates/*.md en $SCRIPT_DIR/templates" >&2; exit 3; }
-  copy_file_safe "$f" "$HOST_DIR/templates/relay/$(basename "$f")"
+  echo "→ agents/"
+  for f in "$SCRIPT_DIR/agents/"*.md; do
+    [ -e "$f" ] || { echo "ERROR: no se encontraron agents/*.md en $SCRIPT_DIR/agents" >&2; exit 3; }
+    copy_file_safe "$f" "$host_dir/agents/relay/$(basename "$f")"
+  done
+  if [ -d "$SCRIPT_DIR/agents/sub" ]; then
+    for f in "$SCRIPT_DIR/agents/sub/"*.md; do
+      [ -e "$f" ] || break
+      copy_file_safe "$f" "$host_dir/agents/relay/$(basename "$f")"
+    done
+  fi
+
+  echo "→ templates/"
+  for f in "$SCRIPT_DIR/templates/"*.md; do
+    [ -e "$f" ] || { echo "ERROR: no se encontraron templates/*.md en $SCRIPT_DIR/templates" >&2; exit 3; }
+    copy_file_safe "$f" "$host_dir/templates/relay/$(basename "$f")"
+  done
 done
 
 # ------------------------------------------------------------------------------
@@ -219,12 +276,17 @@ done
 # ------------------------------------------------------------------------------
 # Footer / Quick start.
 # ------------------------------------------------------------------------------
+echo ""
+echo "========================================"
+echo "relay-kit instalado"
+echo "========================================"
+echo "Hosts:"
+for entry in "${HOSTS[@]}"; do
+  name="${entry%%|*}"
+  path="${entry#*|}"
+  printf "  · %-22s → %s\n" "$name" "$path"
+done
 cat <<EOF
-
-========================================
-relay-kit instalado
-========================================
-Host  : ${HOST_NAME} (${HOST_DIR})
 Proy. : ${TARGET_DIR}/.relay/
 
 Si este proyecto YA tiene código, corré /onboard ahora para sembrar el
